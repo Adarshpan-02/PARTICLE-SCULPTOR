@@ -2,6 +2,8 @@
 
 Upload a photo. Watch it become a 3D particle cloud you can actually explore.
 
+Live Site (particle-sculptor.netlify.app/)
+
 ## What it does
 
 Particle Sculptor takes any image and rebuilds it as a three-dimensional point cloud. Every pixel becomes a particle positioned in space — brighter areas push toward you, darker areas recede — so the result has real depth, not just the illusion of it.
