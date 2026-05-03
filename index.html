@@ -1,0 +1,639 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8"/>
+<meta name="viewport" content="width=device-width, initial-scale=1.0, user-scalable=no"/>
+<title>PARTICLE SCULPTOR</title>
+<link rel="stylesheet" href="style.css">
+</head>
+<body>
+<div class="shell">
+
+  <!-- HEADER -->
+  <header>
+    <div class="logo">PARTICLE <b>SCULPTOR</b></div>
+    <div class="hbtns">
+      <button class="btn" id="btn-reset" disabled>✕ Reset</button>
+      <button class="btn" id="btn-shot"  disabled>⊙ Shot</button>
+      <button class="btn" id="btn-obj"   disabled>↓ OBJ</button>
+      <button class="btn" id="btn-ply"   disabled>↓ PLY</button>
+    </div>
+  </header>
+
+  <!-- BODY -->
+  <div class="body-row" id="body-row">
+
+    <!-- SIDEBAR -->
+    <aside class="sidebar" id="sidebar">
+
+      <!-- Upload -->
+      <div class="sb-block">
+        <div class="sec-title">Input Image</div>
+        <div class="dropzone" id="dropzone">
+          <input type="file" id="file-in" accept="image/*"/>
+          <span class="drop-icon">◎</span>
+          <div class="drop-txt"><strong>Drop Image Here</strong>click to browse · JPG PNG WEBP</div>
+        </div>
+      </div>
+
+      <!-- Preview -->
+      <div class="sb-block" style="padding:12px 14px;">
+        <div class="prev-box" id="prev-box">
+          <img id="prev-img" src="" alt=""/>
+          <div class="prev-lbl">SOURCE</div>
+        </div>
+      </div>
+
+      <!-- Controls -->
+      <div class="sb-block">
+        <div class="sec-title">Particle Settings</div>
+
+        <div class="ctrl">
+          <div class="ctrl-row">Density <span id="v-den">60,000</span><span class="rt-badge">LIVE</span></div>
+          <input type="range" id="c-den" min="2000" max="150000" step="2000" value="60000"/>
+        </div>
+
+        <div class="ctrl">
+          <div class="ctrl-row">Depth Scale <span id="v-dep">1.2</span><span class="rt-badge">LIVE</span></div>
+          <input type="range" id="c-dep" min="0.0" max="5.0" step="0.1" value="1.2"/>
+        </div>
+
+        <div class="ctrl">
+          <div class="ctrl-row">Particle Size <span id="v-sz">1.8</span></div>
+          <input type="range" id="c-sz" min="0.3" max="6.0" step="0.1" value="1.8"/>
+        </div>
+
+        <div class="ctrl">
+          <div class="ctrl-row">BG Threshold <span id="v-th">30</span><span class="rt-badge">LIVE</span></div>
+          <input type="range" id="c-th" min="0" max="240" step="5" value="30"/>
+        </div>
+
+        <div class="ctrl">
+          <div class="ctrl-row">Background Remove</div>
+          <select id="c-bg">
+            <option value="dark">Remove Dark Background</option>
+            <option value="light">Remove Light Background</option>
+            <option value="none">Keep All Pixels</option>
+          </select>
+        </div>
+
+        <div class="ctrl">
+          <div class="ctrl-row">Color Mode</div>
+          <select id="c-col">
+            <option value="real">Real Image Colors</option>
+            <option value="bw">Grayscale</option>
+            <option value="inv">Inverted Grayscale</option>
+          </select>
+        </div>
+
+        <div class="ctrl" style="margin-bottom:0;">
+          <div class="ctrl-row">Animation</div>
+          <select id="c-anim">
+            <option value="breathe">Breathe</option>
+            <option value="rotate">Auto-Rotate</option>
+            <option value="wave">Wave</option>
+            <option value="none">Static</option>
+          </select>
+        </div>
+      </div>
+
+      <!-- Generate -->
+      <div class="sb-block">
+        <button class="btn btn-primary gen-btn" id="btn-gen" disabled>▶ GENERATE</button>
+      </div>
+
+    </aside>
+
+    <!-- SIDEBAR TOGGLE — sits on viewport left edge -->
+    <button class="sb-toggle" id="sb-toggle" title="Hide sidebar">
+      <svg viewBox="0 0 6 10" fill="none" stroke="#aaa" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round">
+        <polyline points="5,1 1,5 5,9"/>
+      </svg>
+    </button>
+
+    <!-- VIEWPORT -->
+    <div class="vp" id="vp">
+      <canvas id="glc"></canvas>
+
+      <!-- idle -->
+      <div class="ov" id="ov-idle">
+        <div class="ring"><span class="ring-ico">⬡</span></div>
+        <div class="ov-label">Upload an image<br/>to sculpt particles</div>
+      </div>
+
+      <!-- processing -->
+      <div class="ov off" id="ov-proc">
+        <div class="prog-wrap">
+          <div class="prog-label" id="p-lbl">Initialising…</div>
+          <div class="prog-track"><div class="prog-fill" id="p-fill"></div></div>
+          <div class="prog-pct"  id="p-pct">0%</div>
+        </div>
+      </div>
+
+      <!-- HUD -->
+      <div class="hud" id="hud">
+        <div>PARTICLES <span id="h-ct">—</span></div>
+        <div>FPS <span id="h-fps">—</span></div>
+      </div>
+      <div class="ctrl-hint" id="ctrl-hint">DRAG · ROTATE<br/>SCROLL · ZOOM<br/>RIGHT DRAG · PAN</div>
+    </div>
+
+  </div><!-- end body-row -->
+
+  <!-- FOOTER -->
+  <footer>
+    <div class="fstat">STATUS <span id="f-st">IDLE</span></div>
+    <div class="fstat">PARTICLES <span id="f-ct">—</span></div>
+    <div class="fstat">RESOLUTION <span id="f-res">—</span></div>
+    <div class="fstat">COLORS <span id="f-col">—</span></div>
+  </footer>
+
+</div><!-- end shell -->
+
+<!-- hidden sampling canvas -->
+<canvas id="sc" style="display:none;"></canvas>
+
+<script src="https://cdnjs.cloudflare.com/ajax/libs/three.js/r128/three.min.js"></script>
+<script>
+'use strict';
+
+/* ════════════════════════════════════════════
+   STATE
+════════════════════════════════════════════ */
+let scene, camera, renderer, pts;
+let srcImg  = null;      // raw Image element
+let rawPx   = null;      // { data, sw, sh } — cached pixel data from last image load
+let expData = null;      // export arrays
+
+// Camera orbit
+let sph = { th:0, ph:Math.PI/2, r:280 };
+let pan = { x:0, y:0 };
+
+// FPS
+let fpsF=0, fpsT=0;
+
+// Debounce timer for live sliders
+let debTimer = null;
+
+const glCanvas = document.getElementById('glc');
+const vp       = document.getElementById('vp');
+const sc       = document.getElementById('sc');  // sample canvas
+
+/* ════════════════════════════════════════════
+   THREE.JS INIT
+════════════════════════════════════════════ */
+function initThree(){
+  scene  = new THREE.Scene();
+  scene.background = new THREE.Color(0x000000);
+
+  camera = new THREE.PerspectiveCamera(55, 1, 0.01, 10000);
+  camera.position.set(0,0,280);
+
+  renderer = new THREE.WebGLRenderer({
+    canvas: glCanvas,
+    antialias: true,
+    preserveDrawingBuffer: true   // needed for screenshot
+  });
+  renderer.setPixelRatio(Math.min(window.devicePixelRatio,2));
+
+  fitCanvas();
+  window.addEventListener('resize', fitCanvas);
+  renderLoop();
+}
+
+function fitCanvas(){
+  const w = vp.clientWidth, h = vp.clientHeight;
+  if(w===0||h===0) return;
+  renderer.setSize(w, h, false);   // false = don't touch CSS size
+  camera.aspect = w/h;
+  camera.updateProjectionMatrix();
+}
+
+/* ════════════════════════════════════════════
+   RENDER LOOP
+════════════════════════════════════════════ */
+function renderLoop(){
+  requestAnimationFrame(renderLoop);
+
+  // Orbit camera
+  const {th,ph,r} = sph;
+  camera.position.set(
+    pan.x + r*Math.sin(ph)*Math.sin(th),
+    pan.y + r*Math.cos(ph),
+              r*Math.sin(ph)*Math.cos(th)
+  );
+  camera.lookAt(pan.x, pan.y, 0);
+
+  // Particle animations
+  if(pts){
+    const t    = performance.now()*0.001;
+    const anim = document.getElementById('c-anim').value;
+    const pos  = pts.geometry.attributes.position;
+    const base = pts.geometry.attributes.basePos;
+
+    if(anim==='rotate'){
+      pts.rotation.y = t*0.22;
+    } else {
+      pts.rotation.y = 0;
+    }
+
+    if(anim==='breathe'){
+      pts.scale.setScalar(1+0.025*Math.sin(t*0.7));
+    } else if(anim==='wave'){
+      for(let i=0;i<pos.count;i++){
+        pos.setZ(i, base.getZ(i)+Math.sin(base.getX(i)*0.04+t*1.1)*Math.cos(base.getY(i)*0.04+t*0.7)*6);
+      }
+      pos.needsUpdate=true;
+      pts.scale.setScalar(1);
+    } else {
+      pts.scale.setScalar(1);
+    }
+  }
+
+  // FPS counter
+  fpsF++;
+  const now = performance.now();
+  if(now-fpsT>700){
+    document.getElementById('h-fps').textContent = Math.round(fpsF/((now-fpsT)/1000));
+    fpsF=0; fpsT=now;
+  }
+
+  renderer.render(scene,camera);
+}
+
+/* ════════════════════════════════════════════
+   ORBIT CONTROLS  (events only on vp)
+════════════════════════════════════════════ */
+let dragging=false, panning=false;
+let lastM={x:0,y:0};
+let pinchD0=0, pinchR0=0;
+let touches0=[];
+
+vp.addEventListener('mousedown', e=>{
+  e.preventDefault();
+  panning  = e.button===2;
+  dragging = e.button!==2;
+  lastM={x:e.clientX,y:e.clientY};
+});
+window.addEventListener('mouseup', ()=>{ dragging=false; panning=false; });
+window.addEventListener('mousemove', e=>{
+  const dx=e.clientX-lastM.x, dy=e.clientY-lastM.y;
+  lastM={x:e.clientX,y:e.clientY};
+  if(dragging){
+    sph.th -= dx*0.004;
+    sph.ph  = Math.max(0.04,Math.min(Math.PI-0.04,sph.ph-dy*0.004));
+  }
+  if(panning){
+    const f=sph.r*0.0009;
+    pan.x-=dx*f; pan.y+=dy*f;
+  }
+});
+
+// Wheel: ONLY zoom on vp, never scroll page
+vp.addEventListener('wheel', e=>{
+  e.preventDefault();
+  e.stopPropagation();
+  sph.r = Math.max(10, Math.min(3000, sph.r+e.deltaY*0.25));
+}, {passive:false});
+
+// Sidebar wheel — let it scroll sidebar only
+document.getElementById('sidebar').addEventListener('wheel', e=>{
+  e.stopPropagation();
+}, {passive:true});
+
+vp.addEventListener('contextmenu', e=>e.preventDefault());
+
+// Touch
+vp.addEventListener('touchstart', e=>{
+  e.preventDefault();
+  touches0=Array.from(e.touches);
+  if(e.touches.length===2){
+    pinchD0=Math.hypot(e.touches[0].clientX-e.touches[1].clientX, e.touches[0].clientY-e.touches[1].clientY);
+    pinchR0=sph.r;
+  }
+},{passive:false});
+
+vp.addEventListener('touchmove', e=>{
+  e.preventDefault();
+  if(e.touches.length===1&&touches0.length){
+    const dx=e.touches[0].clientX-touches0[0].clientX;
+    const dy=e.touches[0].clientY-touches0[0].clientY;
+    sph.th -= dx*0.004;
+    sph.ph  = Math.max(0.04,Math.min(Math.PI-0.04,sph.ph-dy*0.004));
+    touches0=Array.from(e.touches);
+  }
+  if(e.touches.length===2){
+    const d=Math.hypot(e.touches[0].clientX-e.touches[1].clientX,e.touches[0].clientY-e.touches[1].clientY);
+    sph.r=Math.max(10,Math.min(3000,pinchR0*(pinchD0/d)));
+  }
+},{passive:false});
+
+vp.addEventListener('touchend', e=>{ touches0=Array.from(e.touches); },{passive:false});
+
+/* ════════════════════════════════════════════
+   PIXEL CACHE  — sample image once, reuse
+════════════════════════════════════════════ */
+function cachePixels(img){
+  const MAX=800;
+  const iw=img.naturalWidth, ih=img.naturalHeight;
+  const scale=Math.min(MAX/iw, MAX/ih, 1);
+  const sw=Math.round(iw*scale), sh=Math.round(ih*scale);
+  sc.width=sw; sc.height=sh;
+  const ctx=sc.getContext('2d');
+  ctx.clearRect(0,0,sw,sh);
+  ctx.drawImage(img,0,0,sw,sh);
+  rawPx={ data: ctx.getImageData(0,0,sw,sh).data, sw, sh };
+}
+
+/* ════════════════════════════════════════════
+   GENERATE PARTICLES  (uses cached pixels)
+════════════════════════════════════════════ */
+async function generate(isLive){
+  if(!srcImg) return;
+
+  // Disable generate button during run
+  document.getElementById('btn-gen').disabled=true;
+  showOv('proc');
+  if(!isLive) setStatus('PROCESSING');
+
+  await tick(16);
+
+  // Use cached pixels — only re-sample if no cache
+  if(!rawPx) cachePixels(srcImg);
+  const {data:raw, sw, sh} = rawPx;
+
+  prog(20,'Filtering pixels…'); await tick(16);
+
+  const bgMode  = document.getElementById('c-bg').value;
+  const thresh  = parseInt(document.getElementById('c-th').value);
+  const density = parseInt(document.getElementById('c-den').value);
+  const depthSc = parseFloat(document.getElementById('c-dep').value);
+  const colMode = document.getElementById('c-col').value;
+
+  // Build kept pixel list
+  // Store as flat typed array for speed: [r,g,b,lum,x,y, ...]
+  const tmpKept=[];
+  for(let y=0;y<sh;y++){
+    for(let x=0;x<sw;x++){
+      const i=(y*sw+x)*4;
+      const r=raw[i],g=raw[i+1],b=raw[i+2],a=raw[i+3];
+      if(a<64) continue;
+      const lum=0.299*r+0.587*g+0.114*b;
+      if(bgMode==='dark'  && lum<thresh) continue;
+      if(bgMode==='light' && lum>(255-thresh)) continue;
+      tmpKept.push(r,g,b,lum,x,y);
+    }
+  }
+
+  if(tmpKept.length===0){
+    alert('No pixels survived the filter. Try lowering BG Threshold or changing Background Remove mode.');
+    showOv(pts?'none':'idle'); setStatus('IDLE');
+    document.getElementById('btn-gen').disabled=false;
+    return;
+  }
+
+  prog(45,'Sampling particles…'); await tick(16);
+
+  const pixCount=tmpKept.length/6;
+  const n=Math.min(density,pixCount);
+  const step=pixCount/n;
+  const span=Math.max(sw,sh);
+  const unit=200/span;
+  const cx=sw/2, cy=sh/2;
+
+  const positions=new Float32Array(n*3);
+  const colors   =new Float32Array(n*3);
+
+  for(let i=0;i<n;i++){
+    // Stratified sample with jitter
+    const rawIdx=Math.min(Math.floor(i*step+Math.random()*step),pixCount-1)*6;
+    const pr=tmpKept[rawIdx], pg=tmpKept[rawIdx+1], pb=tmpKept[rawIdx+2];
+    const lum=tmpKept[rawIdx+3];
+    const px=tmpKept[rawIdx+4], py=tmpKept[rawIdx+5];
+    const lum01=lum/255;
+
+    positions[i*3  ]=(px-cx)*unit;
+    positions[i*3+1]=-(py-cy)*unit;
+    positions[i*3+2]=(lum01-0.5)*200*depthSc;
+
+    if(colMode==='real'){
+      colors[i*3  ]=pr/255;
+      colors[i*3+1]=pg/255;
+      colors[i*3+2]=pb/255;
+    } else if(colMode==='bw'){
+      colors[i*3]=colors[i*3+1]=colors[i*3+2]=lum01;
+    } else {
+      const inv=1-lum01;
+      colors[i*3]=colors[i*3+1]=colors[i*3+2]=inv;
+    }
+  }
+
+  prog(75,'Building geometry…'); await tick(16);
+
+  // Dispose old
+  if(pts){ scene.remove(pts); pts.geometry.dispose(); pts.material.dispose(); pts=null; }
+
+  const geo=new THREE.BufferGeometry();
+  geo.setAttribute('position',new THREE.BufferAttribute(positions,3));
+  geo.setAttribute('basePos',new THREE.BufferAttribute(positions.slice(),3));
+  geo.setAttribute('color',new THREE.BufferAttribute(colors,3));
+
+  const mat=new THREE.PointsMaterial({
+    size: parseFloat(document.getElementById('c-sz').value),
+    vertexColors:true,
+    sizeAttenuation:true,
+    transparent:true,
+    opacity:0.96,
+  });
+
+  pts=new THREE.Points(geo,mat);
+  scene.add(pts);
+
+  // Auto-fit camera on first load (not on live updates)
+  if(!isLive){
+    const aspect=sw/sh;
+    sph={th:0,ph:Math.PI/2,r:Math.max(200,200/Math.min(aspect,1))};
+    pan={x:0,y:0};
+  }
+
+  expData={
+    positions:Array.from(positions),
+    colors:Array.from(colors),
+    count:n
+  };
+
+  prog(100,'Done'); await tick(80);
+
+  showOv('none');
+  document.getElementById('hud').classList.add('on');
+  document.getElementById('ctrl-hint').classList.add('on');
+  document.getElementById('h-ct').textContent =n.toLocaleString();
+  document.getElementById('f-ct').textContent =n.toLocaleString();
+  document.getElementById('f-res').textContent=`${sw}×${sh}`;
+  document.getElementById('f-col').textContent=colMode==='real'?'RGB':'BW';
+  setStatus('ACTIVE');
+
+  ['btn-obj','btn-ply','btn-shot'].forEach(id=>document.getElementById(id).disabled=false);
+  document.getElementById('btn-gen').disabled=false;
+}
+
+/* ════════════════════════════════════════════
+   LIVE SLIDER DEBOUNCE
+════════════════════════════════════════════ */
+function liveRegen(){
+  clearTimeout(debTimer);
+  debTimer=setTimeout(()=>{ if(srcImg) generate(true); },180);
+}
+
+/* ════════════════════════════════════════════
+   EXPORT
+════════════════════════════════════════════ */
+function dlOBJ(){
+  if(!expData) return;
+  const {positions:p,count:n}=expData;
+  let s=`# Particle Sculptor\n# Particles: ${n}\n\n`;
+  for(let i=0;i<n;i++) s+=`v ${p[i*3].toFixed(4)} ${p[i*3+1].toFixed(4)} ${p[i*3+2].toFixed(4)}\n`;
+  s+='\np'; for(let i=1;i<=n;i++) s+=' '+i;
+  dlFile('particles.obj',s,'text/plain');
+}
+
+function dlPLY(){
+  if(!expData) return;
+  const {positions:p,colors:c,count:n}=expData;
+  let s=`ply\nformat ascii 1.0\nelement vertex ${n}\nproperty float x\nproperty float y\nproperty float z\nproperty uchar red\nproperty uchar green\nproperty uchar blue\nend_header\n`;
+  for(let i=0;i<n;i++)
+    s+=`${p[i*3].toFixed(4)} ${p[i*3+1].toFixed(4)} ${p[i*3+2].toFixed(4)} ${Math.round(c[i*3]*255)} ${Math.round(c[i*3+1]*255)} ${Math.round(c[i*3+2]*255)}\n`;
+  dlFile('particles.ply',s,'text/plain');
+}
+
+function dlFile(name,content,type){
+  const a=document.createElement('a');
+  a.href=URL.createObjectURL(new Blob([content],{type}));
+  a.download=name;
+  document.body.appendChild(a); a.click(); document.body.removeChild(a);
+  URL.revokeObjectURL(a.href);
+}
+
+function screenshot(){
+  renderer.render(scene,camera);
+  const a=document.createElement('a');
+  a.href=glCanvas.toDataURL('image/png');
+  a.download='particle-sculpture.png';
+  document.body.appendChild(a); a.click(); document.body.removeChild(a);
+}
+
+/* ════════════════════════════════════════════
+   UI HELPERS
+════════════════════════════════════════════ */
+function showOv(which){
+  document.getElementById('ov-idle').classList.toggle('off', which!=='idle');
+  document.getElementById('ov-proc').classList.toggle('off', which!=='proc');
+}
+function prog(pct,lbl){
+  document.getElementById('p-fill').style.width=pct+'%';
+  document.getElementById('p-pct').textContent=pct+'%';
+  document.getElementById('p-lbl').textContent=lbl;
+}
+function setStatus(s){ document.getElementById('f-st').textContent=s; }
+function tick(ms){ return new Promise(r=>setTimeout(r,ms)); }
+
+/* ════════════════════════════════════════════
+   FILE INPUT
+════════════════════════════════════════════ */
+function loadFile(file){
+  if(!file||!file.type.startsWith('image/')) return;
+  const url=URL.createObjectURL(file);
+  const img=new Image();
+  img.onload=()=>{
+    srcImg=img;
+    rawPx=null;   // clear pixel cache — new image
+    cachePixels(img);
+
+    document.getElementById('prev-img').src=url;
+    document.getElementById('prev-box').classList.add('on');
+    document.getElementById('btn-gen').disabled=false;
+    document.getElementById('btn-reset').disabled=false;
+    setStatus('IMAGE LOADED');
+    generate(false);
+  };
+  img.src=url;
+}
+
+document.getElementById('file-in').addEventListener('change',e=>loadFile(e.target.files[0]));
+
+const dz=document.getElementById('dropzone');
+dz.addEventListener('dragover', e=>{ e.preventDefault(); dz.classList.add('over'); });
+dz.addEventListener('dragleave',()=>dz.classList.remove('over'));
+dz.addEventListener('drop',     e=>{ e.preventDefault(); dz.classList.remove('over'); loadFile(e.dataTransfer.files[0]); });
+
+/* ════════════════════════════════════════════
+   BUTTON WIRING
+════════════════════════════════════════════ */
+document.getElementById('btn-gen').addEventListener('click',()=>generate(false));
+document.getElementById('btn-obj').addEventListener('click',dlOBJ);
+document.getElementById('btn-ply').addEventListener('click',dlPLY);
+document.getElementById('btn-shot').addEventListener('click',screenshot);
+
+document.getElementById('btn-reset').addEventListener('click',()=>{
+  if(pts){ scene.remove(pts); pts.geometry.dispose(); pts.material.dispose(); pts=null; }
+  srcImg=null; rawPx=null; expData=null;
+  document.getElementById('prev-box').classList.remove('on');
+  document.getElementById('prev-img').src='';
+  ['btn-gen','btn-reset','btn-obj','btn-ply','btn-shot'].forEach(id=>document.getElementById(id).disabled=true);
+  document.getElementById('hud').classList.remove('on');
+  document.getElementById('ctrl-hint').classList.remove('on');
+  ['h-ct','f-ct','f-res','f-col'].forEach(id=>document.getElementById(id).textContent='—');
+  document.getElementById('file-in').value='';
+  sph={th:0,ph:Math.PI/2,r:280}; pan={x:0,y:0};
+  showOv('idle'); setStatus('IDLE');
+});
+
+/* ════════════════════════════════════════════
+   SLIDER BINDINGS
+════════════════════════════════════════════ */
+// Label-only updates (instant)
+[['c-den','v-den',v=>parseInt(v).toLocaleString()],
+ ['c-dep','v-dep',v=>parseFloat(v).toFixed(1)],
+ ['c-sz', 'v-sz', v=>parseFloat(v).toFixed(1)],
+ ['c-th', 'v-th', v=>v],
+].forEach(([id,vid,fmt])=>{
+  document.getElementById(id).addEventListener('input',function(){
+    document.getElementById(vid).textContent=fmt(this.value);
+  });
+});
+
+// LIVE regen — density, depth, threshold
+['c-den','c-dep','c-th'].forEach(id=>{
+  document.getElementById(id).addEventListener('input',liveRegen);
+});
+
+// BG mode and color mode — also live regen
+['c-bg','c-col'].forEach(id=>{
+  document.getElementById(id).addEventListener('change',liveRegen);
+});
+
+// Particle size — instant, no regen
+document.getElementById('c-sz').addEventListener('input',function(){
+  if(pts) pts.material.size=parseFloat(this.value);
+});
+
+/* ════════════════════════════════════════════
+   SIDEBAR TOGGLE
+════════════════════════════════════════════ */
+const bodyRow  = document.getElementById('body-row');
+const sbToggle = document.getElementById('sb-toggle');
+
+sbToggle.addEventListener('click', ()=>{
+  const collapsed = bodyRow.classList.toggle('collapsed');
+  sbToggle.title = collapsed ? 'Show sidebar' : 'Hide sidebar';
+  setTimeout(fitCanvas, 300);
+});
+
+/* ════════════════════════════════════════════
+   BOOT
+════════════════════════════════════════════ */
+initThree();
+showOv('idle');
+</script>
+</body>
+</html>
