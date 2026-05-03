@@ -2,7 +2,7 @@
 
 Upload a photo. Watch it become a 3D particle cloud you can actually explore.
 
-Live Site (particle-sculptor.netlify.app/)
+Live Site ( https://particle-sculptor.netlify.app/)
 
 ## What it does
 
